@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tom — Virtual Classroom AI Language Tutor</title>
+    <meta name="description" content="Tom is your personal AI language tutor. Practice English, Telugu, Hindi, and Tamil with real-time scoring, grammar correction, and pronunciation guidance." />
+    <!-- Favicon to prevent 404 error -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👨‍🏫</text></svg>">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Caveat:wght@500;600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        /* ============================================================
+           RESET & BASE
+        ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            /* ── Light classroom palette (from reference image) ── */
+            --bg-page:       #f5f0e8;       /* warm cream page */
+            --bg-panel:      #fffdf8;       /* almost white panel */
+            --bg-navbar:     rgba(255,253,248,0.92);
+            --border-subtle: rgba(0,0,0,0.08);
+            --border-mid:    rgba(0,0,0,0.14);
+
+            --amber:         #e9a020;       /* teacher outfit amber/gold */
+            --amber-light:   #f5be55;
+            --amber-dark:    #b97a10;
+            --amber-bg:      rgba(233,160,32,0.10);
+
+            --sage:          #8bb89a;       /* chalkboard sage green */
+            --sage-dark:     #5d8a6e;
+            --sage-board:    #7aaa8a;       /* board surface */
+            --sage-bg:       rgba(139,184,154,0.15);
+
+            --sky:           #aacde8;       /* book blue */
+            --brown:         #7a5c3a;       /* wood frame, hair */
+            --brown-light:   #a07a50;
+
+            --text-dark:     #2d2416;       /* dark warm text */
+            --text-mid:      #5a4a30;       /* medium warm text */
+            --text-muted:    #9a8a70;       /* muted warm text */
+
+            /* Board chalk colors for light board */
+            --chalk-white:   #1a2e1a;       /* dark green text on sage */
+            --chalk-cream:   #1a2e1a;
+            --chalk-green:   #0d5c2e;
+            --chalk-yellow:  #7a4a00;
+            --chalk-pink:    #8b2252;
+            --board-bg:      #8fb89f;
+            --board-mid:     #7aaa8a;
+            --board-frame:   #7a5c3a;
+            --board-frame2:  #a07a50;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Nunito', 'DM Sans', sans-serif;
+            background: var(--bg-page);
+            color: var(--text-dark);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ============================================================
+           AMBIENT BACKGROUND — soft warm classroom light
+        ============================================================ */
+        .ambient {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        .ambient::before {
+            content: '';
+            position: absolute;
+            top: -5%;
+            left: 10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(233,160,32,0.10) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: drift1 18s ease-in-out infinite alternate;
+        }
+        .ambient::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 8%;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(139,184,154,0.12) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: drift2 22s ease-in-out infinite alternate;
+        }
+        @keyframes drift1 { 0%{transform:translate(0,0)} 100%{transform:translate(40px,30px)} }
+        @keyframes drift2 { 0%{transform:translate(0,0)} 100%{transform:translate(-30px,-40px)} }
+
+        /* Subtle dot grid — very faint on light bg */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(rgba(0,0,0,0.045) 1px, transparent 1px);
+            background-size: 24px 24px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ============================================================
+           NAVBAR — warm light
+        ============================================================ */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            height: 58px;
+            background: var(--bg-navbar);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+        }
+
+        .nav-left, .nav-right { display: flex; align-items: center; gap: 10px; }
+
+        .nav-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            background: rgba(233,160,32,0.08);
+            border: 1px solid rgba(233,160,32,0.22);
+            white-space: nowrap;
+        }
+        .nav-pill-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .nav-pill select {
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            color: var(--amber-dark);
+        }
+        .nav-pill select.mt-select { color: var(--sage-dark); }
+        select option { background: #fffdf8; color: var(--text-dark); }
+
+        /* Mode toggle */
+        .mode-toggle {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 3px;
+            border-radius: 999px;
+            background: rgba(0,0,0,0.05);
+            border: 1px solid var(--border-subtle);
+        }
+        .mode-btn {
+            padding: 4px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            color: var(--text-muted);
+            background: transparent;
+        }
+        .mode-btn.active {
+            background: var(--amber);
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(233,160,32,0.35);
+        }
+        .mode-btn:not(.active):hover { color: var(--text-dark); }
+
+        /* Status pill */
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 999px;
+            background: rgba(93,138,110,0.10);
+            border: 1px solid rgba(93,138,110,0.28);
+            color: var(--sage-dark);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--sage-dark);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(0.8)} }
+
+        /* Download button */
+        #download-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, rgba(233,160,32,0.15), rgba(245,190,85,0.12));
+            border: 1px solid rgba(233,160,32,0.35);
+            color: var(--amber-dark);
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+        #download-btn:hover {
+            background: linear-gradient(135deg, rgba(233,160,32,0.28), rgba(245,190,85,0.22));
+            border-color: rgba(233,160,32,0.6);
+            color: #8a4a00;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(233,160,32,0.20);
+        }
+        #download-btn:active { transform: translateY(0); }
+
+        /* User Avatar */
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--amber), var(--amber-light));
+            padding: 1.5px;
+            cursor: pointer;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(233,160,32,0.30);
+        }
+        .user-avatar-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #fffdf8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 900;
+            font-size: 11px;
+            color: var(--amber-dark);
+        }
+
+        /* ============================================================
+           MAIN LAYOUT
+        ============================================================ */
+        .classroom {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 18px;
+            overflow: hidden;
+            padding: 18px;
+        }
+
+        /* ============================================================
+           LEFT PANEL — TEACHER TOM
+        ============================================================ */
+        .tom-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0;
+            position: relative;
+            padding-top: 4px;
+        }
+
+        /* Speech Bubble */
+        .speech-bubble-wrap {
+            position: relative;
+            width: 100%;
+            min-height: 52px;
+            margin-bottom: 8px;
+        }
+        #speech-bubble {
+            display: block;
+            background: #fffdf8;
+            color: var(--text-dark);
+            font-family: 'Caveat', cursive;
+            font-size: 17px;
+            font-weight: 600;
+            line-height: 1.45;
+            padding: 11px 15px;
+            border-radius: 16px 16px 16px 4px;
+            border: 2px solid rgba(233,160,32,0.40);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+            position: relative;
+            width: 100%;
+            animation: bubble-pop 0.35s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        #speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -14px;
+            left: 26px;
+            border: 7px solid transparent;
+            border-top-color: rgba(233,160,32,0.40);
+        }
+        #speech-bubble::before {
+            content: '';
+            position: absolute;
+            bottom: -11px;
+            left: 27px;
+            border: 6px solid transparent;
+            border-top-color: #fffdf8;
+            z-index: 1;
+        }
+        #speech-bubble.visible { display: block; }
+
+        @keyframes bubble-pop {
+            0%   { opacity:0; transform:scale(0.85) translateY(8px); }
+            100% { opacity:1; transform:scale(1) translateY(0); }
+        }
+
+        /* Tom Avatar Stage (Transparent) */
+        .tom-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            position: relative;
+            padding: 18px 14px 14px;
+        }
+
+        /* Radar rings when holding mic */
+        #radar-container {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .radar-ring {
+            position: absolute;
+            border-radius: 50%;
+            animation: radar-pulse 2s cubic-bezier(0,0.2,0.8,1) infinite;
+        }
+        @keyframes radar-pulse {
+            0%   { transform:scale(0.85); opacity:0.7; }
+            100% { transform:scale(1.6);  opacity:0;   }
+        }
+
+        /* Teacher scene */
+        .tom-scene {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 100%;
+        }
+
+        /* Avatar breathing */
+        @keyframes breathing {
+            0%,100% { transform:translateY(0) scale(1); }
+            50%      { transform:translateY(-4px) scale(1.015); }
+        }
+        #avatar-wrapper { animation: breathing 4.5s ease-in-out infinite; }
+
+        /* Eye blink */
+        @keyframes eye-blink {
+            0%,94%,98%,100% { transform:scaleY(1); }
+            96%              { transform:scaleY(0.08); }
+        }
+        .avatar-blink { transform-origin:center; animation:eye-blink 5s infinite; }
+
+        /* Ear perked (kept for JS compatibility, applied to hair group) */
+        @keyframes ear-listen {
+            0%,100% { transform:rotate(0deg); }
+            50%      { transform:rotate(-3deg); }
+        }
+        .ear-perked { animation:ear-listen 0.8s ease-in-out infinite alternate; transform-origin:bottom center; }
+
+        /* Teacher name / status */
+        .tom-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .tom-name {
+            font-family: 'Nunito', sans-serif;
+            font-weight: 900;
+            font-size: 17px;
+            color: var(--text-dark);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .tom-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 999px;
+            background: var(--amber-bg);
+            color: var(--amber-dark);
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            border: 1px solid rgba(233,160,32,0.28);
+        }
+        #tom-status-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 700;
+            text-align: center;
+        }
+
+        /* Visualizer canvas */
+        #visualizer {
+            width: 100%;
+            height: 26px;
+            background: rgba(233,160,32,0.08);
+            border-radius: 10px;
+            display: block;
+            margin-top: 2px;
+            border: 1px solid rgba(233,160,32,0.15);
+        }
+
+        /* Push to talk */
+        .ptalk-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            width: 100%;
+        }
+        #mic-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, var(--amber), var(--amber-light));
+            border: none;
+            color: #fff;
+            font-size: 22px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 24px rgba(233,160,32,0.45);
+            transition: all 0.2s;
+            user-select: none;
+            position: relative;
+            z-index: 2;
+        }
+        #mic-btn:hover {
+            background: linear-gradient(135deg, var(--amber-light), #f8d080);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(233,160,32,0.55);
+        }
+        #mic-btn:active { transform: scale(0.90); }
+
+        #mic-hint {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            user-select: none;
+        }
+
+        /* ============================================================
+           RIGHT PANEL — CHALKBOARD (sage green, light)
+        ============================================================ */
+        .board-panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            gap: 10px;
+        }
+
+        /* Wooden outer frame — warm brown */
+        .board-frame {
+            flex: 1;
+            background: linear-gradient(160deg, var(--brown-light) 0%, var(--brown) 100%);
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow:
+                0 0 0 2px #5a3a18,
+                0 10px 36px rgba(0,0,0,0.18),
+                inset 0 2px 6px rgba(255,255,255,0.15),
+                inset 0 -2px 6px rgba(0,0,0,0.20);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+        .board-frame::before {
+            content: '';
+            position: absolute;
+            inset: 5px;
+            border-radius: 8px;
+            border: 2px solid rgba(255,255,255,0.12);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Classic Dark Green Chalkboard */
+        #chalkboard {
+            flex: 1;
+            background:
+                radial-gradient(ellipse at 20% 25%, rgba(255,255,255,0.15) 0%, transparent 55%),
+                linear-gradient(165deg, #375e46 0%, #244230 50%, #2e503a 100%);
+            border-radius: 6px;
+            padding: 24px 28px;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: relative;
+            z-index: 1;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0,0,0,0.10) transparent;
+        }
+        #chalkboard::-webkit-scrollbar { width: 5px; }
+        #chalkboard::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 3px; }
+
+        /* Chalk ledge — warm wood */
+        .chalk-ledge {
+            height: 12px;
+            background: linear-gradient(180deg, var(--brown) 0%, #5a3510 100%);
+            border-radius: 0 0 4px 4px;
+            margin-top: 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 8px;
+            z-index: 2;
+            position: relative;
+        }
+        .chalk-piece {
+            height: 7px;
+            width: 30px;
+            border-radius: 3px;
+            opacity: 0.88;
+        }
+
+        /* Welcome chalk message */
+        .chalk-welcome {
+            text-align: center;
+            padding: 24px 16px;
+        }
+        .chalk-welcome h2 {
+            font-family: 'Caveat', cursive;
+            font-size: 32px;
+            font-weight: 800;
+            color: #f8fcf9;
+            margin-bottom: 8px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        .chalk-welcome p {
+            font-family: 'Caveat', cursive;
+            font-size: 19px;
+            color: rgba(255,255,255,0.85);
+            line-height: 1.6;
+        }
+        .chalk-divider-dec {
+            width: 80px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+            margin: 14px auto;
+            border-radius: 1px;
+        }
+
+        /* Assessment Card on Board */
+        .chalk-assessment { animation: chalk-write 0.5s ease-out; }
+        @keyframes chalk-write {
+            0%   { opacity:0; transform:translateY(10px); }
+            100% { opacity:1; transform:translateY(0); }
+        }
+
+        .chalk-divider-line {
+            border: none;
+            border-top: 1px dashed rgba(255,255,255,0.25);
+            margin: 20px 0;
+        }
+
+        /* Score header row */
+        .chalk-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        .chalk-date {
+            font-family: 'Caveat', cursive;
+            font-size: 14px;
+            color: rgba(255,255,255,0.60);
+        }
+        .chalk-session-label {
+            font-family: 'Caveat', cursive;
+            font-size: 26px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+        .chalk-grade-stamp {
+            font-family: 'Caveat', cursive;
+            font-size: 24px;
+            font-weight: 800;
+            padding: 6px 16px;
+            border-radius: 10px;
+            border: 2.5px solid;
+            text-align: center;
+            line-height: 1.1;
+            flex-shrink: 0;
+        }
+        .grade-high  { color:#a8e6cf; border-color:rgba(168,230,207,0.55);  background:rgba(168,230,207,0.12); }
+        .grade-mid   { color:#ffd3b6; border-color:rgba(255,211,182,0.55);  background:rgba(255,211,182,0.12); }
+        .grade-low   { color:#ffb3ba; border-color:rgba(255,179,186,0.50);  background:rgba(255,179,186,0.12); }
+
+        /* Board sections */
+        .board-section { margin-bottom: 14px; }
+        .board-section-label {
+            font-family: 'Caveat', cursive;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.65);
+            margin-bottom: 3px;
+        }
+        .board-section-content {
+            font-family: 'Caveat', cursive;
+            font-size: 21px;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+        .content-you-said  { color: #ffffff; }
+        .content-corrected { color: #a8e6cf; font-weight: 700; }
+        .content-phonetic  { color: #ffd3b6; font-size:18px; }
+        .content-notes     { color: rgba(255,255,255,0.9); font-size:18px; font-weight:500; }
+
+        /* Replay button on board */
+        .chalk-replay-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 6px 16px;
+            border-radius: 8px;
+            border: 1.5px solid rgba(255,255,255,0.35);
+            background: rgba(255,255,255,0.1);
+            color: #ffffff;
+            font-family: 'Caveat', cursive;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chalk-replay-btn:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.6);
+            transform: translateY(-1px);
+        }
+
+        /* Duster Button & Animation */
+        .duster-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 6px;
+            background: linear-gradient(180deg, #d8b898, #b89878);
+            border: 1px solid #8a6a4a;
+            color: #4a2a0a;
+            font-size: 11px;
+            font-weight: 800;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .duster-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            background: linear-gradient(180deg, #e8c8a8, #c8a888);
+        }
+        .duster-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        .wipe-overlay {
+            position: absolute;
+            top: 0;
+            left: -120%;
+            width: 120%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.1) 70%, rgba(255,255,255,0.6) 95%, #b89878 95%, #8a6a4a 100%);
+            z-index: 50;
+            pointer-events: none;
+        }
+        @keyframes wipe-board {
+            0%   { left: -120%; }
+            100% { left: 100%; }
+        }
+        .wiping .wipe-overlay {
+            animation: wipe-board 0.8s ease-in-out forwards;
+        }
+
+        /* Score history bar at bottom — light warm */
+        .history-bar {
+            height: 40px;
+            background: #fffdf8;
+            border-radius: 10px;
+            border: 1px solid rgba(233,160,32,0.18);
+            display: flex;
+            align-items: center;
+            padding: 0 14px;
+            gap: 10px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+        }
+        .history-bar-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-muted);
+            letter-spacing: 0.10em;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        #score-chips {
+            display: flex;
+            gap: 5px;
+            flex: 1;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        #score-chips::-webkit-scrollbar { display: none; }
+        .score-chip {
+            padding: 2px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            font-family: 'Nunito', sans-serif;
+            flex-shrink: 0;
+        }
+        .chip-high { background:rgba(13,92,46,0.10);  color:#0d5c2e; border:1px solid rgba(13,92,46,0.28);  }
+        .chip-mid  { background:rgba(122,74,0,0.10);  color:#7a4a00; border:1px solid rgba(122,74,0,0.28);  }
+        .chip-low  { background:rgba(139,26,26,0.08); color:#8b1a1a; border:1px solid rgba(139,26,26,0.22); }
+        #avg-score-display {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* ============================================================
+           HIDDEN — preserve JS contracts
+        ============================================================ */
+        #transcript-input { display: none; }
+
+        /* ============================================================
+           SCROLLBAR global — light
+        ============================================================ */
+        * { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.10) transparent; }
+        *::-webkit-scrollbar { width: 5px; height: 5px; }
+        *::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.10); border-radius: 3px; }
+
+        /* ============================================================
+           RESPONSIVE
+        ============================================================ */
+        @media (max-width: 820px) {
+            .classroom { grid-template-columns: 1fr; overflow-y: auto; }
+            html, body { overflow: auto; }
+            .board-panel { min-height: 55vh; }
+            #download-btn span { display: none; }
+            .nav-pill-label { display: none; }
+        }
+        @media (max-width: 520px) {
+            .mode-toggle { display: none; }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ambient"></div>
+
+    <!-- ============================================================
+         TOP NAVBAR
+    ============================================================ -->
+    <header class="navbar">
+        <!-- Left -->
+        <div class="nav-left">
+            <!-- Target Language -->
+            <div class="nav-pill">
+                <span class="nav-pill-label">Learn</span>
+                <select id="target-lang" class="lang-select">
+                    <option value="English">English (US)</option>
+                    <option value="Telugu">Telugu (తెలుగు)</option>
+                    <option value="Hindi">Hindi (हिंदी)</option>
+                    <option value="Tamil">Tamil (தமிழ்)</option>
+                </select>
+            </div>
+
+            <!-- Mother Tongue -->
+            <div class="nav-pill">
+                <span class="nav-pill-label">My Language</span>
+                <select id="mother-tongue" class="mt-select">
+                    <option value="Hindi">Hindi (हिंदी)</option>
+                    <option value="Telugu">Telugu (తెలుగు)</option>
+                    <option value="Tamil">Tamil (தமிழ்)</option>
+                    <option value="English">English</option>
+                </select>
+            </div>
+
+            <!-- Mode Toggle -->
+            <div class="mode-toggle">
+                <button id="mode-practice" class="mode-btn active" onclick="setMode('practice')">Direct Practice</button>
+                <button id="mode-bridge"   class="mode-btn"        onclick="setMode('bridge')">Speak Mother Tongue</button>
+            </div>
+        </div>
+
+        <!-- Right -->
+        <div class="nav-right">
+            <!-- AWS Status -->
+            <div class="status-pill">
+                <span class="status-dot"></span>
+                AWS Nova Micro Active
+            </div>
+
+            <!-- Download Lesson Notes -->
+            <button id="download-btn" onclick="downloadLessonNotes()" title="Download Lesson Notes">
+                <i class="fa-solid fa-file-arrow-down"></i>
+                <span>Download Lesson Notes</span>
+            </button>
+
+            <!-- User Avatar -->
+            <div class="user-avatar">
+                <div class="user-avatar-inner">SS</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============================================================
+         CLASSROOM MAIN LAYOUT
+    ============================================================ -->
+    <main class="classroom">
+
+        <!-- ==================================================
+             LEFT: TEACHER TOM
+        ================================================== -->
+        <section class="tom-panel">
+
+            <!-- Speech Bubble -->
+            <div class="speech-bubble-wrap">
+                <div id="speech-bubble">Welcome to class! Hold the microphone below to practice speaking.</div>
+            </div>
+
+            <!-- Tom Stage Card -->
+            <div class="tom-stage">
+                <!-- Radar rings when holding mic -->
+                <div id="radar-container">
+                    <div class="radar-ring" style="width:180px;height:180px;background:rgba(59,130,246,0.12);"></div>
+                    <div class="radar-ring" style="width:250px;height:250px;background:rgba(59,130,246,0.07);animation-delay:0.65s;"></div>
+                </div>
+
+                <!-- Teacher Figure Image -->
+                <div class="tom-scene">
+                    <div id="avatar-wrapper" style="width: 240px; display: flex; justify-content: center;">
+                        <img src="/static/teacher.png" alt="Teacher Tom" class="w-60 md:w-72 h-auto select-none pointer-events-none object-contain" style="width: 100%; height: auto; mix-blend-mode: multiply; user-select: none; pointer-events: none; object-fit: contain; position: relative; z-index: 2;" />
+                    </div>
+                </div>
+
+                <!-- Tom Name & Status -->
+                <div class="tom-label">
+                    <div class="tom-name">Tom <span class="tom-badge">AI Tutor</span></div>
+                    <p id="tom-status-text">Press and hold the button to speak with me</p>
+                </div>
+
+                <!-- Audio Visualizer — ORIGINAL ID PRESERVED -->
+                <canvas id="visualizer"></canvas>
+            </div>
+
+            <!-- Push-to-Talk — ALL ORIGINAL IDs PRESERVED -->
+            <div class="ptalk-wrap">
+                <button id="mic-btn" title="Hold to Speak">
+                    <i id="mic-icon" class="fa-solid fa-microphone"></i>
+                </button>
+                <span id="mic-hint">HOLD TO SPEAK</span>
+            </div>
+        </section>
+
+        <!-- ==================================================
+             RIGHT: CHALKBOARD
+        ================================================== -->
+        <section class="board-panel">
+            <!-- Outer wooden frame -->
+            <div class="board-frame">
+                <!-- Green board surface -->
+                <div id="chalkboard">
+                    <!-- Welcome chalk message -->
+                    <div id="chalk-welcome-msg" class="chalk-welcome">
+                        <h2>✦ Welcome to Class ✦</h2>
+                        <div class="chalk-divider-dec"></div>
+                        <p>Hello! I'm Tom, your personal AI tutor.</p>
+                        <p>Hold the microphone button, speak a sentence,<br/>then release.</p>
+                        <p style="margin-top:14px;color:rgba(255,255,255,0.60);">I'll score your fluency, correct your grammar,<br/>and guide pronunciation — all right here on the board.</p>
+                    </div>
+                </div>
+
+                <!-- Chalk ledge -->
+                <div class="chalk-ledge">
+                    <div class="chalk-piece" style="background:#fffdf8;"></div>
+                    <div class="chalk-piece" style="background:#f5c96a;width:20px;"></div>
+                    <div class="chalk-piece" style="background:#a8d8b8;width:24px;"></div>
+                    <div style="flex:1;"></div>
+                    <button class="duster-btn" onclick="clearBoard()" title="Clean the board">
+                        <i class="fa-solid fa-eraser"></i> Clean Board
+                    </button>
+                </div>
+            </div>
+
+            <!-- Score history strip -->
+            <div class="history-bar">
+                <span class="history-bar-label">Session Scores</span>
+                <div id="score-chips">
+                    <span style="font-size:11px;color:var(--text-muted);font-weight:700;font-family:'Nunito',sans-serif;">No attempts yet</span>
+                </div>
+                <span id="avg-score-display"></span>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Hidden input — preserves JS contract: document.getElementById("transcript-input").value = ... -->
+    <input id="transcript-input" type="text" readonly />
+
+    <!-- ============================================================
+         JAVASCRIPT — All original functions preserved verbatim
+    ============================================================ -->
+    <script>
+        /* ──────────────────────────────────────────────────
+           STATE
+        ────────────────────────────────────────────────── */
+        let currentMode = "practice";
+        let isHolding = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let microphoneStream = null;
+        let audioContext = null;
+        let analyser = null;
+        let animFrameId = null;
+
+        /* Session history for lesson notes download */
+        let sessionHistory = [];
+
+        const canvas    = document.getElementById("visualizer");
+        const canvasCtx = canvas.getContext("2d");
+
+        /* ──────────────────────────────────────────────────
+           MODE TOGGLE  (PRESERVED VERBATIM)
+        ────────────────────────────────────────────────── */
+        function setMode(mode) {
+            currentMode = mode;
+            const pracBtn   = document.getElementById("mode-practice");
+            const bridgeBtn = document.getElementById("mode-bridge");
+            if (mode === "practice") {
+                pracBtn.classList.add("active");
+                bridgeBtn.classList.remove("active");
+            } else {
+                bridgeBtn.classList.add("active");
+                pracBtn.classList.remove("active");
+            }
+        }
+
+        /* ──────────────────────────────────────────────────
+           AUDIO VISUALIZER  (PRESERVED VERBATIM)
+        ────────────────────────────────────────────────── */
+        function drawVisualizer() {
+            animFrameId = requestAnimationFrame(drawVisualizer);
+            if (!analyser || !isHolding) {
+                canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+            let bufferLength = analyser.frequencyBinCount;
+            let dataArray    = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            let barWidth = (canvas.width / bufferLength) * 2;
+            let barHeight;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i] / 8;
+                canvasCtx.fillStyle = '#e9a020';
+                canvasCtx.fillRect(x, (canvas.height - barHeight) / 2, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+
+        /* ──────────────────────────────────────────────────
+           PUSH-TO-TALK HANDLERS  (PRESERVED VERBATIM)
+        ────────────────────────────────────────────────── */
+        const micBtn = document.getElementById("mic-btn");
+
+        micBtn.addEventListener("mousedown", startSpeaking);
+        window.addEventListener("mouseup", () => { if (isHolding) stopSpeaking(); });
+
+        micBtn.addEventListener("touchstart", (e) => { e.preventDefault(); startSpeaking(); }, { passive: false });
+        window.addEventListener("touchend",   () => { if (isHolding) stopSpeaking(); });
+
+        /* ──────────────────────────────────────────────────
+           startSpeaking  (PRESERVED VERBATIM + bubble hide)
+        ────────────────────────────────────────────────── */
+        async function startSpeaking() {
+            if (isHolding) return;
+
+            // Tear down any previous session to prevent duplicates
+            await cleanupAudio();
+
+            isHolding = true;
+            recordedChunks = [];
+
+            // Avatar listening state
+            document.getElementById("tom-status-text").innerText = "Tom is listening closely...";
+            document.getElementById("radar-container").style.opacity = "1";
+            const ears = document.getElementById("avatar-ears");
+            if (ears) ears.classList.add("ear-perked");
+            document.getElementById("mic-icon").className = "fa-solid fa-waveform-lines animate-pulse";
+            document.getElementById("mic-hint").innerText = "RELEASE TO SEND";
+            hideSpeechBubble();
+
+            try {
+                microphoneStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 16000,
+                        channelCount: 1
+                    }
+                });
+
+                // Visualizer setup — read-only, no scriptProcessor
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(microphoneStream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 64;
+                source.connect(analyser);
+                // NOTE: do NOT connect analyser to destination — avoids echo feedback
+                drawVisualizer();
+
+                // MediaRecorder — captures from the raw stream, no double-buffering
+                const mimeType = getSupportedMimeType();
+                mediaRecorder = new MediaRecorder(microphoneStream, mimeType ? { mimeType } : {});
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) {
+                        recordedChunks.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    const blob = new Blob(recordedChunks, { type: mimeType || 'audio/webm' });
+                    recordedChunks = [];
+                    await sendAudioToTutor(blob);
+                };
+
+                mediaRecorder.start(100); // collect data every 100ms
+
+            } catch (err) {
+                console.error("Microphone error:", err);
+                alert("Microphone access error: " + err.message);
+                await cleanupAudio();
+                isHolding = false;
+                resetMicUI();
+            }
+        }
+
+        /* ──────────────────────────────────────────────────
+           stopSpeaking  (PRESERVED VERBATIM)
+        ────────────────────────────────────────────────── */
+        async function stopSpeaking() {
+            if (!isHolding) return;
+            isHolding = false;
+
+            // Avatar thinking state
+            document.getElementById("tom-status-text").innerText = "Tom is analyzing your phrasing...";
+            document.getElementById("radar-container").style.opacity = "0";
+            const ears = document.getElementById("avatar-ears");
+            if (ears) ears.classList.remove("ear-perked");
+            document.getElementById("mic-icon").className = "fa-solid fa-spinner fa-spin";
+            document.getElementById("mic-hint").innerText = "PROCESSING...";
+
+            // Stop the visualizer animation
+            if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Stop recording — onstop will fire and send the audio
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+            }
+
+            // Stop mic tracks
+            if (microphoneStream) {
+                microphoneStream.getTracks().forEach(t => t.stop());
+                microphoneStream = null;
+            }
+
+            // Close audio context
+            if (audioContext && audioContext.state !== "closed") {
+                await audioContext.close();
+                audioContext = null;
+            }
+            analyser = null;
+        }
+
+        /* ──────────────────────────────────────────────────
+           cleanupAudio  (PRESERVED VERBATIM)
+        ────────────────────────────────────────────────── */
+        async function cleanupAudio() {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+            }
+            mediaRecorder = null;
+            recordedChunks = [];
+
+            if (microphoneStream) {
+                microphoneStream.getTracks().forEach(t => t.stop());
+                microphoneStream = null;
+            }
+
+            if (audioContext && audioContext.state !== "closed") {
+                await audioContext.close();
+                audioContext = null;
+            }
+            analyser = null;
+
+            if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
+        }
+
+        /* ──────────────────────────────────────────────────
+           getSupportedMimeType  (PRESERVED VERBATIM)
+        ────────────────────────────────────────────────── */
+        function getSupportedMimeType() {
+            const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/ogg'];
+            for (const type of types) {
+                if (MediaRecorder.isTypeSupported(type)) return type;
+            }
+            return null;
+        }
+
+        /* ──────────────────────────────────────────────────
+           resetMicUI  (PRESERVED VERBATIM)
+        ────────────────────────────────────────────────── */
+        function resetMicUI() {
+            document.getElementById("mic-icon").className = "fa-solid fa-microphone";
+            document.getElementById("mic-hint").innerText = "HOLD TO SPEAK";
+            document.getElementById("tom-status-text").innerText = "Press and hold the button to speak with me";
+        }
+
+        /* ──────────────────────────────────────────────────
+           sendAudioToTutor  (PRESERVED VERBATIM — form data contract unchanged)
+           POST /api/process-audio with fields: file, target_lang, mother_tongue, mode
+        ────────────────────────────────────────────────── */
+        async function sendAudioToTutor(blob) {
+            const targetLang   = document.getElementById("target-lang").value;
+            const motherTongue = document.getElementById("mother-tongue").value;
+
+            const formData = new FormData();
+            formData.append("file",          blob, "voice.webm");
+            formData.append("target_lang",   targetLang);
+            formData.append("mother_tongue", motherTongue);
+            formData.append("mode",          currentMode);
+
+            try {
+                const res    = await fetch("/api/process-audio", { method: "POST", body: formData });
+                const result = await res.json();
+
+                if (!res.ok) throw new Error(result.error || "Failed to process audio.");
+
+                const data = result.data;
+
+                // Preserved JS contract — hidden input assignment
+                document.getElementById("transcript-input").value = data.original_text;
+
+                appendAssessmentCard(data, result.audio_base64);
+                playTomSpeech(result.audio_base64);
+
+            } catch (err) {
+                console.error("Send error:", err);
+                alert("Error: " + err.message);
+            } finally {
+                resetMicUI();
+            }
+        }
+
+        /* ──────────────────────────────────────────────────
+           appendAssessmentCard
+           Kept with IDENTICAL name & signature as original.
+           Now renders on the chalkboard instead of a chat bubble.
+        ────────────────────────────────────────────────── */
+        function appendAssessmentCard(data, audioBase64) {
+            // Append to in-memory session history first
+            appendToSessionHistory(data);
+
+            // Hide welcome message on first result
+            const welcome = document.getElementById("chalk-welcome-msg");
+            if (welcome) { welcome.style.display = "none"; }
+
+            renderOnChalkboard(data, audioBase64);
+        }
+
+        /* ──────────────────────────────────────────────────
+           renderOnChalkboard — chalk-styled assessment card
+        ────────────────────────────────────────────────── */
+        function renderOnChalkboard(data, audioBase64) {
+            const board = document.getElementById("chalkboard");
+
+            // Dashed separator between assessments (not before the first)
+            if (board.querySelectorAll(".chalk-assessment").length > 0) {
+                const hr = document.createElement("hr");
+                hr.className = "chalk-divider-line";
+                board.appendChild(hr);
+            }
+
+            const score      = data.score;
+            const gradeClass = score >= 85 ? "grade-high" : score >= 65 ? "grade-mid" : "grade-low";
+            const gradeEmoji = score >= 85 ? "⭐" : score >= 65 ? "✓" : "✗";
+            const now        = new Date();
+            const timeStr    = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const sessionNum = document.querySelectorAll(".chalk-assessment").length + 1;
+            const targetLang = document.getElementById("target-lang").value;
+
+            const card = document.createElement("div");
+            card.className = "chalk-assessment";
+
+            const phoneticHTML = data.phonetic_guide
+                ? `<div class="board-section">
+                       <div class="board-section-label">&#128218; Phonetic Guide</div>
+                       <div class="board-section-content content-phonetic">${escapeHtml(data.phonetic_guide)}</div>
+                   </div>`
+                : "";
+
+            card.innerHTML = `
+                <div class="chalk-header">
+                    <div>
+                        <div class="chalk-date">${timeStr} &nbsp;&middot;&nbsp; ${escapeHtml(targetLang)}</div>
+                        <div class="chalk-session-label">Assessment #${sessionNum}</div>
+                    </div>
+                    <div class="chalk-grade-stamp ${gradeClass}">Grade: ${score}/100 ${gradeEmoji}</div>
+                </div>
+
+                <div class="board-section">
+                    <div class="board-section-label">&#128483; You Said</div>
+                    <div class="board-section-content content-you-said">&ldquo;${escapeHtml(data.original_text)}&rdquo;</div>
+                </div>
+
+                <div class="board-section">
+                    <div class="board-section-label">&#9999;&#65039; Correction &frasl; Ideal Sentence</div>
+                    <div class="board-section-content content-corrected">${escapeHtml(data.corrected_text)}</div>
+                </div>
+
+                ${phoneticHTML}
+
+                <div class="board-section">
+                    <div class="board-section-label">&#128221; Teacher&rsquo;s Notes</div>
+                    <div class="board-section-content content-notes">${escapeHtml(data.spoken_reply)}</div>
+                </div>
+
+                <button class="chalk-replay-btn">
+                    <i class="fa-solid fa-volume-high"></i> Replay Tom&rsquo;s Voice
+                </button>
+            `;
+
+            // Wire replay button safely via addEventListener — no inline base64 in HTML
+            card.querySelector(".chalk-replay-btn").addEventListener("click", () => playTomSpeech(audioBase64));
+
+            board.appendChild(card);
+            board.scrollTop = board.scrollHeight;
+
+            // Update score chips strip
+            updateScoreBar(score);
+        }
+
+        /* ──────────────────────────────────────────────────
+           clearBoard — wipes the chalkboard UI and history
+        ────────────────────────────────────────────────── */
+        function clearBoard() {
+            if (sessionHistory.length === 0) return;
+
+            const board = document.getElementById("chalkboard");
+            
+            // Create wipe overlay
+            const wipe = document.createElement("div");
+            wipe.className = "wipe-overlay";
+            board.appendChild(wipe);
+            board.classList.add("wiping");
+
+            setTimeout(() => {
+                // Clear assessments
+                board.querySelectorAll(".chalk-assessment, .chalk-divider-line").forEach(el => el.remove());
+                
+                // Show welcome message
+                const welcome = document.getElementById("chalk-welcome-msg");
+                if (welcome) welcome.style.display = "block";
+                
+                // Reset session
+                sessionHistory = [];
+                
+                // Reset score chips
+                const chips = document.getElementById("score-chips");
+                chips.innerHTML = `<span style="font-size:11px;color:var(--text-muted);font-weight:700;font-family:'Nunito',sans-serif;">No attempts yet</span>`;
+                document.getElementById("avg-score-display").textContent = "";
+            }, 400); // halfway through animation
+
+            setTimeout(() => {
+                if (wipe.parentNode) wipe.remove();
+                board.classList.remove("wiping");
+            }, 850);
+        }
+
+        /* ──────────────────────────────────────────────────
+           updateScoreBar
+        ────────────────────────────────────────────────── */
+        function updateScoreBar(score) {
+            const chips = document.getElementById("score-chips");
+
+            // Remove "No attempts yet" placeholder on first entry
+            const placeholder = chips.querySelector("span:not(.score-chip)");
+            if (placeholder) chips.innerHTML = "";
+
+            const chipClass = score >= 85 ? "chip-high" : score >= 65 ? "chip-mid" : "chip-low";
+            const chip = document.createElement("span");
+            chip.className = `score-chip ${chipClass}`;
+            chip.textContent = `${score}`;
+            chips.appendChild(chip);
+            chips.scrollLeft = chips.scrollWidth;
+
+            // Running average
+            const avg = Math.round(sessionHistory.reduce((s, e) => s + e.score, 0) / sessionHistory.length);
+            document.getElementById("avg-score-display").textContent = `Avg: ${avg}/100`;
+        }
+
+        /* ──────────────────────────────────────────────────
+           escapeHtml  (PRESERVED VERBATIM)
+        ────────────────────────────────────────────────── */
+        function escapeHtml(text) {
+            if (!text) return "";
+            return String(text)
+                .replace(/&/g,  "&amp;")
+                .replace(/</g,  "&lt;")
+                .replace(/>/g,  "&gt;")
+                .replace(/"/g,  "&quot;");
+        }
+
+        /* ──────────────────────────────────────────────────
+           playTomSpeech  (PRESERVED VERBATIM — base64 MP3)
+           data:audio/mp3;base64, + result.audio_base64
+        ────────────────────────────────────────────────── */
+        function playTomSpeech(audioBase64) {
+            const audio = new Audio("data:audio/mp3;base64," + audioBase64);
+            const mouth = document.getElementById("avatar-mouth");
+
+            document.getElementById("tom-status-text").innerText = "Tom is speaking...";
+
+            // Show speech bubble with latest spoken_reply
+            const latest = sessionHistory[sessionHistory.length - 1];
+            if (latest && latest.spokenReply) {
+                showSpeechBubble(latest.spokenReply);
+            }
+
+            let mouthInterval = null;
+            if (mouth) {
+                mouthInterval = setInterval(() => {
+                    let openHeight = 134 + Math.floor(Math.random() * 8);
+                    mouth.setAttribute("d", `M 90 128 Q 100 ${openHeight} 110 128`);
+                }, 100);
+            }
+
+            audio.onended = () => {
+                if (mouthInterval) clearInterval(mouthInterval);
+                if (mouth) mouth.setAttribute("d", "M 90 128 Q 100 134 110 128");
+                hideSpeechBubble();
+                resetMicUI();
+            };
+
+            audio.play().catch(err => console.error("Audio play error:", err));
+        }
+
+        /* ──────────────────────────────────────────────────
+           Speech Bubble helpers
+        ────────────────────────────────────────────────── */
+        function showSpeechBubble(text) {
+            const bubble = document.getElementById("speech-bubble");
+            if (bubble) {
+                bubble.textContent = text;
+                bubble.classList.add("visible");
+            }
+        }
+
+        function hideSpeechBubble() {
+            const bubble = document.getElementById("speech-bubble");
+            if (bubble) {
+                bubble.textContent = "Welcome to class! Hold the microphone below to practice speaking.";
+            }
+        }
+
+        /* ──────────────────────────────────────────────────
+           Session History
+        ────────────────────────────────────────────────── */
+        function appendToSessionHistory(data) {
+            sessionHistory.push({
+                timestamp:     new Date().toISOString(),
+                targetLang:    document.getElementById("target-lang").value,
+                originalText:  data.original_text   || "",
+                correctedText: data.corrected_text   || "",
+                score:         data.score            || 0,
+                phoneticGuide: data.phonetic_guide   || "",
+                explanation:   data.spoken_reply     || "",
+                spokenReply:   data.spoken_reply     || ""
+            });
+        }
+
+        /* ──────────────────────────────────────────────────
+           downloadLessonNotes — generates Tom_Language_Lesson_<Date>.txt
+        ────────────────────────────────────────────────── */
+        function downloadLessonNotes() {
+            if (sessionHistory.length === 0) {
+                alert("No lesson notes yet — practice a few sentences first!");
+                return;
+            }
+
+            const date    = new Date();
+            const dateStr = date.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+            const timeStr = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+            const avg     = Math.round(sessionHistory.reduce((s, e) => s + e.score, 0) / sessionHistory.length);
+            const lang    = sessionHistory[0]?.targetLang || "Unknown";
+
+            const lines = [];
+            lines.push("=================================================================");
+            lines.push("         TOM'S LANGUAGE LESSON NOTES");
+            lines.push("=================================================================");
+            lines.push("");
+            lines.push(`  Date         : ${dateStr} at ${timeStr}`);
+            lines.push(`  Language     : ${lang}`);
+            lines.push(`  Attempts     : ${sessionHistory.length}`);
+            lines.push(`  Average Score: ${avg}/100`);
+            lines.push("");
+            lines.push("-----------------------------------------------------------------");
+            lines.push("");
+
+            sessionHistory.forEach((entry, i) => {
+                const ts      = new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                const tag     = entry.score >= 85 ? "Excellent ⭐" : entry.score >= 65 ? "Good ✓" : "Needs Work ✗";
+
+                lines.push(`  [${i + 1}]  ${ts}  —  Score: ${entry.score}/100  (${tag})`);
+                lines.push("");
+                lines.push(`  You Said   : "${entry.originalText}"`);
+                lines.push(`  Correction : ${entry.correctedText}`);
+                if (entry.phoneticGuide) {
+                    lines.push(`  Phonetics  : ${entry.phoneticGuide}`);
+                }
+                lines.push(`  Notes      : ${entry.explanation}`);
+                lines.push("");
+                lines.push("  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -");
+                lines.push("");
+            });
+
+            lines.push("-----------------------------------------------------------------");
+            lines.push(`  Overall Performance: ${avg}/100`);
+            if (avg >= 85)       lines.push("  Excellent! You're speaking with real confidence. Keep it up! 🌟");
+            else if (avg >= 65)  lines.push("  Good effort! Focus on the corrections above and keep practicing.");
+            else                 lines.push("  Great start! Review the corrections and try again — you've got this!");
+            lines.push("");
+            lines.push("  Generated by Tom — AI Language Tutor");
+            lines.push("=================================================================");
+
+            const blob  = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+            const url   = URL.createObjectURL(blob);
+            const a     = document.createElement("a");
+            const fname = `Tom_Language_Lesson_${date.toISOString().split("T")[0]}.txt`;
+            a.href      = url;
+            a.download  = fname;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
